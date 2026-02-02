@@ -1,0 +1,77 @@
+/*原本是用來設定全網頁通用css但發現差異太大只放入幾個引入文字跟背景遮罩*/
+
+/*自訂義字體*/
+@font-face {
+    font-family: 'CuteFont';
+    src: url('font/NaikaiFont-Regular-Lite.woff'); 
+}
+@font-face {
+    font-family: 'popFont';
+    src: url('font/PopGothicCjkTc-Regular.woff2');
+}
+
+.center-text {
+    display: flex;
+    justify-content: center; /* 水平置中 */
+    align-items: center;     /* 垂直置中 */
+    height: 80vh;           /* 撐滿整個畫面高度 */
+    text-align: center;
+            /* 調整字體大小 */
+    font-family: 'CuteFont', sans-serif; /* 使用自定義字體 */
+    color: white;
+    text-shadow: 2px 2px 6px rgba(0, 0, 0, 0.6); /* 增加可讀性 */
+    z-index: 1;
+    position: relative;
+}
+/* 設定 body 不受影響的布局 */
+body, html {
+    height: auto;
+    margin: 0;
+    padding: 0;
+    overflow: auto;
+}
+.overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(255, 255, 255, 0.3);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px); /* Safari 支援 */
+    z-index: -1;
+}
+/* 設定背景視頻 */
+.background-video {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: -2;
+}
+
+/* 設定其他頁面元素 */
+ p, a {
+    position: relative;
+    z-index: 1; /* 使文字顯示在視頻之上 */
+    color: white; /* 設定文字顏色為白色 */
+    
+    
+}
+.fontset{
+    font-family: 'CuteFont', sans-serif; /* 使用自定義字體 */
+}
+.fontsetpop{
+    font-family: 'popFont',sans-serif;
+}
+
+
+
+
+
+
+a:hover {
+    text-decoration: underline;
+}

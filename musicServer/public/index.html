@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESP32 雲端音樂播放器</title>
+    <link rel="stylesheet" href="index2Background.css?v=123">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.min.js"></script>
+    
+    <style>
+        /* ================= 視覺樣式 (維持純白半透明) ================= */
+        :root {
+            --accent-cyan: #00f2fe;       
+            --accent-blue: #4facfe;       
+            --glass-bg-transparent: rgba(255, 255, 255, 0.25); 
+            --glass-border: rgba(255, 255, 255, 0.2); 
+            --text-main: #ffffff;         
+            --text-muted: #f0f0f0;
+            --card-radius: 24px;
+            --btn-radius: 16px;
+        }
+
+        @font-face {
+            font-family: 'CuteFont';
+            src: url('font/NaikaiFont-Regular-Lite.woff');
+        }
+        body {
+            font-family: 'CuteFont', '微軟正黑體', sans-serif !important;
+            color: var(--text-main);
+        }
+
+        .video-wrapper {
+            position: fixed;
+            width: 100%; height: 100%;
+            top: 0; left: 0;
+            z-index: -2;
+            overflow: hidden;
+        }
+        .background-video {
+            width: 100%; height: 100%; object-fit: cover;
+        }
+
+        .glass-panel {
+            width: 550px;
+            background-color: var(--glass-bg-transparent);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--card-radius);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
+            padding: 2.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* 頂部裝飾光暈 */
+        .glass-panel::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 1px;
+            background: linear-gradient(90deg, transparent, var(--accent-cyan), transparent);
+            opacity: 0.6;
+        }
+
+        /* 介面元件樣式 */
+        .ip-settings-container { display: inline-flex; align-items: center; background: rgba(0, 0, 0, 0.4); padding: 8px 12px 8px 20px; border-radius: 30px; border: 1px solid rgba(255, 255, 255, 0.2); font-size: 0.9rem; color: var(--text-muted); }
+        .ip-settings-input { border: none; background: transparent; padding: 0 10px; width: 120px; text-align: center; font-weight: bold; color: var(--accent-cyan); outline: none; }
+        .btn-save-ip { background: rgba(255,255,255,0.2); border: none; color: #fff; padding: 4px 14px; border-radius: 20px; font-size: 0.8rem; cursor: pointer; }
+        .btn-save-ip:hover { background: var(--accent-cyan); color: #000; }
+
+        h1.main-title { background: linear-gradient(to right, #fff, var(--accent-cyan)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8)); margin-bottom: 1.5rem; }
+        #song-title { font-size: 1.6rem; font-weight: bold; color: var(--text-main); min-height: 50px; display: flex; align-items: center; justify-content: center; text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9); }
+        #status-badge { padding: 6px 16px; border-radius: 4px; font-size: 0.9rem; background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.1); color: #fff; }
+        #status-badge.bg-success { background: rgba(0, 242, 254, 0.2) !important; border-color: var(--accent-cyan) !important; color: var(--accent-cyan) !important; box-shadow: 0 0 15px rgba(0, 242, 254, 0.4); }
+
+        .progress-container { position: relative; height: 10px; background: rgba(0, 0, 0, 0.6); border-radius: 10px; margin: 25px 0 10px 0; cursor: pointer; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent-blue), var(--accent-cyan)); width: 0%; transition: width 0.2s linear; }
+
+        .control-buttons-area { background: rgba(0, 0, 0, 0.3); padding: 20px; border-radius: var(--btn-radius); margin-top: 30px; border: 1px solid rgba(255, 255, 255, 0.1); }
+        .btn-dark-glass { border: 1px solid rgba(255, 255, 255, 0.2); background: rgba(0, 0, 0, 0.4); color: var(--text-main); border-radius: var(--btn-radius); padding: 12px 20px; transition: 0.3s; }
+        .btn-play-neon { background: linear-gradient(135deg, var(--accent-blue), #00c6ff); border: none; color: #000; font-weight: bold; padding: 12px 40px; }
+        .btn-stop-dark { color: #ff8787; background: rgba(100, 0, 0, 0.4); border-color: rgba(255, 107, 107, 0.3); }
+
+        .neon-slider { -webkit-appearance: none; width: 100%; height: 8px; background: rgba(0, 0, 0, 0.5); border-radius: 5px; outline: none; }
+        .neon-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%; background: var(--accent-cyan); cursor: pointer; border: 2px solid #fff; }
+
+        .custom-url-section { display: flex; align-items: center; background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 12px; padding: 5px; margin: 20px 0; }
+        .input-url { flex: 1; background: transparent; border: none; color: var(--text-main); padding: 8px 12px; outline: none; }
+        .btn-send-url { background: var(--accent-blue); color: #fff; border: none; border-radius: 8px; padding: 6px 15px; font-weight: bold; }
+
+        .playlist-section h3 { color: var(--accent-cyan); font-size: 1.2rem; margin-bottom: 1rem; border-bottom: 1px solid rgba(255, 255, 255, 0.2); padding-bottom: 8px; text-align: left;}
+        .playlist-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+        .btn-playlist-item { text-align: left; background: rgba(0, 0, 0, 0.6); border: 1px solid rgba(255, 255, 255, 0.1); color: var(--text-muted); padding: 12px 15px; border-radius: 12px; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+
+    <div class="video-wrapper">
+        <video autoplay loop muted class="background-video">
+            <source src="image/lakebg.mp4" type="video/mp4">
+        </video>
+    </div>
+
+    <div class="container d-flex justify-content-center align-items-center min-vh-100 py-5">
+        <div class="glass-panel text-center">
+            <div class="position-absolute top-0 end-0 mt-2 me-3">
+                <div class="ip-settings-container">
+                    <span>IP:</span>
+                    <input type="text" id="esp-ip" class="ip-settings-input">
+                    <button class="btn-save-ip" onclick="saveIp()">儲存</button>
+                </div>
+            </div>
+
+            <h1 class="main-title mt-4">ESP32 雲端音樂</h1>
+            
+            <div class="my-5">
+                <div id="song-title"><span>等待播放...</span></div>
+                <div class="mt-3"><span id="status-badge" class="badge">Standby</span></div>
+            </div>
+
+            <div class="px-3">
+                <div class="progress-container" onclick="seekAudio(event)">
+                    <div class="progress-fill" id="progress-bar"></div>
+                </div>
+                <div class="d-flex justify-content-between" style="font-family: monospace; font-size: 0.9rem;">
+                    <span id="curr-time">00:00</span>
+                    <span id="total-time">00:00</span>
+                </div>
+            </div>
+
+            <div class="control-buttons-area">
+                <div class="d-flex justify-content-center gap-4 mb-4">
+                    <button class="btn-dark-glass btn-stop-dark" onclick="sendCmd('stop');resetPlayBtn()">停止</button>
+                    <button class="btn-dark-glass btn-play-neon" onclick="sendCmd('pause');togglePlayState()" id="btn-play-pause">播放</button>
+                </div>
+
+                <div class="volume-control-wrapper mt-3">
+                    <div class="d-flex align-items-center gap-3">
+                        <span>小</span>
+                        <input type="range" class="neon-slider" id="vol-slider" min="0" max="21" value="0">
+                        <span>大</span>
+                    </div>
+                    <div class="mt-2" style="font-size: 0.85rem; letter-spacing: 2px;">
+                        Volume: <strong id="vol-display" style="color: var(--accent-cyan);">--</strong>
+                    </div>
+                </div>
+            </div>
+
+            <div class="custom-url-section">
+                <input type="text" id="custom-url-input" class="input-url" placeholder="YouTube 連結 或 檔名...">
+                <button class="btn-send-url" onclick="playCustomUrl()">➤ 播放</button>
+            </div>
+
+            <div class="playlist-section">
+                <h3>📺 YouTube</h3>
+                <div class="playlist-grid">
+                    <button class="btn-playlist-item" onclick="playMusic('yt', 'O1BCA6ertsE')">▶ 測試歌曲 1</button>
+                    <button class="btn-playlist-item" onclick="playMusic('yt', 'ESCmyMvPV_E')">▶ 測試歌曲 2</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const nodeServer = window.location.origin; 
+        let espIp = localStorage.getItem("esp32_ip") || "192.168.144.182";
+        document.getElementById("esp-ip").value = espIp;
+
+        function saveIp() {
+            espIp = document.getElementById("esp-ip").value;
+            localStorage.setItem("esp32_ip", espIp);
+            alert("IP 已儲存");
+        }
+
+        function sendCmd(action, value = "") {
+            const url = `http://${espIp}/cmd?act=${action}&val=${encodeURIComponent(value)}`;
+            fetch(url).catch(e => {});
+        }
+
+        // ================= 音量控制 (依照您的要求改回) =================
+        function updateVolDisplay(val) {
+            document.getElementById('vol-display').innerText = val;
+        }
+
+        let lastVolValue = 0;
+        document.getElementById('vol-slider').addEventListener('change', function(e) {
+            const newVal = parseInt(e.target.value);
+            const diff = newVal - lastVolValue;
+            
+            if (diff > 0) {
+                for (let i = 0; i < diff; i++) {
+                    setTimeout(() => sendCmd('vol_up'), i * 100);
+                }
+            } else if (diff < 0) {
+                for (let i = 0; i < Math.abs(diff); i++) {
+                    setTimeout(() => sendCmd('vol_dn'), i * 100);
+                }
+            }
+            lastVolValue = newVal;
+        });
+
+        // ================= 播放邏輯 =================
+        function playMusic(type, id) {
+            let targetUrl = (type === 'yt') ? `${nodeServer}/yt?id=${id}` : `${nodeServer}/local-music?file=${id}`;
+            sendCmd('play', targetUrl);
+        }
+
+        function playCustomUrl() {
+			const val = document.getElementById('custom-url-input').value.trim();
+			if (!val) return;
+
+			// 1. YouTube 檢查
+			const ytRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
+			const match = val.match(ytRegex);
+
+			if (match) {
+				// 情境 A: YouTube 連結 -> 取出 ID，走後端轉碼
+				playMusic('yt', match[1]);
+			} else if (val.startsWith("http://") || val.startsWith("https://")) {
+				// 🌟 修正點：如果是完整網址，直接傳送給 ESP32，不要再包一層 local-music
+				sendCmd('play', val);
+			} else {
+				// 情境 C: 純檔名 -> 走後端本地檔案播放 (支援時間顯示與跳轉)
+				playMusic('local', val);
+			}
+		}
+
+        function seekAudio(event) {
+            const percent = event.offsetX / event.currentTarget.clientWidth;
+            const seekSeconds = Math.floor(percent * currentDuration);
+            sendCmd('seek', seekSeconds);
+        }
+
+        let currentDuration = 0;
+        function formatTime(s) {
+            const m = Math.floor(s / 60);
+            const sec = Math.floor(s % 60);
+            return `${m.toString().padStart(2,'0')}:${sec.toString().padStart(2,'0')}`;
+        }
+		function togglePlayState() {
+			const btn = document.getElementById('btn-play-pause');
+			
+			// 判斷目前的狀態
+			// 如果內容包含 "播放"，代表目前是停止或暫停狀態，點擊後要變成 "播放中(顯示暫停鍵)"
+			if (btn.innerHTML.includes('播放')) {
+				// 1. 切換圖標與文字為 "暫停"
+				btn.innerHTML = '暫停'; 
+				
+				
+				
+			} else {
+				// 如果內容是 "暫停"，代表目前正在播放，點擊後要變回 "播放"
+				// 1. 切換圖標與文字為 "播放"
+				btn.innerHTML = "播放";
+				
+			}
+		}
+
+		// 額外建議：當點擊「停止」按鈕時，將播放鍵復原
+		function resetPlayBtn() {
+			const btn = document.getElementById('btn-play-pause');
+			btn.innerHTML = '播放';
+		}
+
+        setInterval(() => {
+            fetch(`http://${espIp}/status`)
+                .then(r => r.json())
+                .then(data => {
+                    document.getElementById('song-title').innerText = data.title || "等待播放...";
+                    const serverVol = parseInt(data.vol);
+                    updateVolDisplay(serverVol);
+                    
+                    const slider = document.getElementById('vol-slider');
+                    if (document.activeElement !== slider) {
+                        slider.value = serverVol;
+                        lastVolValue = serverVol; 
+                    }
+
+                    const statusBadge = document.getElementById('status-badge');
+                    const btnPlayPause = document.getElementById('btn-play-pause');
+                    if (String(data.isPlay) === "true") {
+						statusBadge.innerText = "PLAYING";
+						// 🌟 修正點：加入 bg-success 讓它變亮色
+						statusBadge.className = "badge bg-success"; 
+						btnPlayPause.innerHTML = "暫停"; // 使用 innerHTML 以防有圖標
+					} else {
+						statusBadge.innerText = "PAUSED";
+						// 暫停時恢復為預設灰色
+						statusBadge.className = "badge"; 
+						btnPlayPause.innerHTML = "播放"; // 使用 innerHTML
+					}
+
+                    const curr = parseInt(data.time);
+                    const dur = parseInt(data.dur);
+                    currentDuration = dur;
+                    document.getElementById('curr-time').innerText = formatTime(curr);
+                    document.getElementById('total-time').innerText = formatTime(dur);
+                    document.getElementById('progress-bar').style.width = dur > 0 ? (curr/dur*100)+"%" : "0%";
+                }).catch(e => {});
+        }, 1000);
+    </script>
+</body>
+</html>
