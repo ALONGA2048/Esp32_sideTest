@@ -9,8 +9,8 @@
 #define I2S_LRC       5
 
 // ================= Wi-Fi 設定 =================
-const char* ssid     = "along's phone";
-const char* password = "17802356";
+const char* ssid     = "......";
+const char* password = "......";
 
 // ================= 全域物件 =================
 Audio audio;
@@ -96,10 +96,10 @@ void setup() {
         delay(500);
         Serial.print(".");
     }
-    Serial.println("\n✅ WiFi Connected!");
+    Serial.println("\nWiFi Connected!");
     Serial.print("ESP32 IP: "); Serial.println(WiFi.localIP()); 
 
-    // 1. 設定 Web Server 路由
+    // 設定 Web Server 路由
     server.on("/cmd", handleCommand); 
     server.begin();
 
@@ -113,13 +113,13 @@ void setup() {
       NULL,         // 句柄
       0             // 指定跑在 Core 0
     );
-    Serial.println("🚀 Web Server 已啟動於 Core 0 (獨立運作)");
+    Serial.println("Web Server 已啟動於 Core 0 (獨立運作)");
      
-    // 3. 初始化 Audio (Core 1)
+    // 初始化 Audio (Core 1)
     audio.setPinout(I2S_BCLK, I2S_LRC, I2S_DOUT);
     audio.setVolume(8);
     
-    // 🌟 關鍵調整：加大緩衝區以解決 "slow stream"
+    //加大緩衝區以解決 "slow stream"
     
 
     // 放寬連線超時
@@ -130,7 +130,7 @@ void setup() {
 
 // ================= LOOP (Core 1 - 專心處理音樂) =================
 void loop() {
-    // 1. 優先檢查 Web Server (Core 0) 是否傳來新指令
+    // 優先檢查 Web Server (Core 0) 是否傳來新指令
     if (hasNewCommand) {
         Serial.println("[Main] 執行新播放指令，強制重置...");
         
@@ -148,7 +148,7 @@ void loop() {
         stopCommand = false;
     }
 
-    // 2. 處理音訊 (如果卡住，也不會影響 Core 0 的 Web Server)
+    // 處理音訊 (如果卡住，也不會影響 Core 0 的 Web Server)
     audio.loop(); 
     
     // 讓 Core 1 也能稍微喘息

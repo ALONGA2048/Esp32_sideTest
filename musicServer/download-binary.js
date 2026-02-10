@@ -29,7 +29,7 @@ try {
     console.error('複製 FFmpeg 失敗:', err);
 }
 
-// 3. 下載 yt-dlp
+// 下載 yt-dlp
 console.log('正在下載最新版 yt-dlp...');
 YTDlpWrap.downloadFromGithub(ytDlpPath)
     .then(() => console.log('yt-dlp 下載完成！繼續等待其他套件安裝完成'))

@@ -59,7 +59,7 @@ app.get('/yt', async (req, res) => {
 
     //檢查是否已經有別人正在查這首歌 (防止並發競爭)
     if (fetchingMap.has(videoId)) {
-        console.log(`⏳ [排隊中] 發現已有查詢任務，等待結果...`);
+        console.log(`[排隊中] 發現已有查詢任務，等待結果...`);
         try {
            
             const totalDuration = await fetchingMap.get(videoId);

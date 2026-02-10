@@ -11,11 +11,11 @@
 
 // ================= Wi-Fi 設定 =================
 //填入你的wifi資料
-const char* ssid     = "along's phone";
-const char* password = "17802356";
+const char* ssid     = ".....";
+const char* password = ".....";
 
 // 在ipconfig 那邊確認啟動server.js 其本機ip為何 (填入http://你的本機ip:3000) port 不要亂改
-String nodeServerHost = "http://192.168.144.37:3000"; 
+String nodeServerHost = "........"; 
 
 // ================= 全域物件 =================
 Audio audio;
